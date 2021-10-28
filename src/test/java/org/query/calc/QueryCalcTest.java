@@ -14,8 +14,7 @@ public class QueryCalcTest {
 
     public void doTest(String testName, QueryCalc queryCalc, String caseName) throws IOException, URISyntaxException {
 
-        File parentFolder = new File("/tmp");
-        TemporaryFolder temporaryFolder = new TemporaryFolder(parentFolder);
+        TemporaryFolder temporaryFolder = new TemporaryFolder();
         ClassLoader classLoader = getClass().getClassLoader();
 
         temporaryFolder.create();
