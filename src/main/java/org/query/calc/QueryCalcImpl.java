@@ -64,9 +64,8 @@ public class QueryCalcImpl implements QueryCalc {
 
         t1Rows.forEach(row -> {
             //LEFT JOIN ON a < b + c
-            Double yz = crossJoinResult.higherKey(row.getField1());
-            if (yz != null) {
-                SortedMap<Double, List<Double>> leftJoin = crossJoinResult.tailMap(yz, true);
+            SortedMap<Double, List<Double>> leftJoin = crossJoinResult.tailMap(row.getField1(), false);
+            if (!leftJoin.isEmpty()) {
                 leftJoin.forEach((key, products) -> {
                     products.forEach(rec -> {
                         // x * yz
