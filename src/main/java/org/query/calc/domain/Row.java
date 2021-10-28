@@ -4,13 +4,13 @@ public class Row {
 
     public static final String DELIM = " ";
 
-    private int num;
+    private final int num;
 
     private int firstOcc;
 
-    private Double field1;
+    private final Double field1;
 
-    private Double field2;
+    private final Double field2;
 
     public Row(int num, Double field1, Double field2) {
         this.num = num;

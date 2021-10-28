@@ -3,9 +3,9 @@ package org.query.calc.domain;
 
 public class Group {
 
-    private Double value;
+    private final Double value;
 
-    private int firstOcc;
+    private final int firstOcc;
 
     private Double sum = 0.;
 
