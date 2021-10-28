@@ -30,12 +30,4 @@ public class Row {
         return num;
     }
 
-    public int getFirstOcc() {
-        return firstOcc;
-    }
-
-    public void setFirstOcc(int firstOcc) {
-        this.firstOcc = firstOcc;
-    }
-
 }
