@@ -1,12 +1,17 @@
 package org.query.calc;
 
+import static org.query.calc.domain.Row.DELIM;
+
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 import org.query.calc.domain.Group;
 import org.query.calc.domain.Row;
 
@@ -41,13 +46,19 @@ public class QueryCalcImpl implements QueryCalc {
         // In this context it means, that in case of tie on s-value you should prefer value of a, with a lower row number.
         // In case multiple occurrences, you may assume that group has a row number of the first occurrence.
 
-        List<Row> t2Rows = FileUtils.getValues(t2);
-        List<Row> t3Rows = FileUtils.getValues(t3);
+        List<Row> t2Rows = Utils.readRowsFromFile(t2);
+        List<Row> t3Rows = Utils.readRowsFromFile(t3);
         // SELECT * FROM t2 JOIN t3
         TreeMap<Double, List<Double>> crossJoinResult = Utils.cartesianProduct(t2Rows, t3Rows);
 
-        List<Row> t1Rows = FileUtils.getValues(t1);
+        List<Row> t1Rows = Utils.readRowsFromFile(t1);
 
+        Collection<Group> leftJoinGroups = leftJoin(t1Rows,crossJoinResult);
+
+        Utils.writeResultToFile(sortAndLimit(leftJoinGroups), output);
+    }
+
+    private Collection<Group> leftJoin(List<Row> t1Rows, TreeMap<Double, List<Double>> crossJoinResult) {
         //GROUP BY a
         Map<Double, Group> t1Map = new HashMap<>();
 
@@ -58,17 +69,32 @@ public class QueryCalcImpl implements QueryCalc {
                 SortedMap<Double, List<Double>> leftJoin = crossJoinResult.tailMap(yz, true);
                 leftJoin.forEach((key, products) -> {
                     products.forEach(rec -> {
+                        // x * yz
                         Double xyz = row.getField2() * rec;
                         Group group = t1Map
                                 .computeIfAbsent(row.getField1(), k -> new Group(row.getNum(), row.getField1()));
+                        // SUM(xyz)
                         group.add(xyz);
                     });
                 });
             } else {
+                // NULL in join -> xyz := 0
                 t1Map.computeIfAbsent(row.getField1(), k -> new Group(row.getNum(), row.getField1()));
             }
         });
 
-        FileUtils.writeResult(t1Map, output);
+        return t1Map.values();
+    }
+
+    private List<String> sortAndLimit(Collection<Group> groups) {
+        List<String> lines = new ArrayList<>();
+        lines.add(String.valueOf(Math.min(groups.size(), 10)));
+
+        //ORDER BY s DESC
+        //LIMIT 10
+        lines.addAll(groups.stream().sorted(new GroupComparator()).limit(10)
+                .map(r -> r.getValue() + DELIM + r.getSum()).collect(
+                        Collectors.toList()));
+        return lines;
     }
 }
