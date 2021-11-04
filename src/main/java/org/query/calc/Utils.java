@@ -19,25 +19,6 @@ import org.query.calc.domain.Row;
 
 public class Utils {
 
-    public static TreeMap<Double, List<Double>> cartesianProduct(List<Row> t1, List<Row> t2) {
-        TreeMap<Double, List<Double>> result = new TreeMap<>(Double::compareTo);
-        Map<Double, List<Double>> map = new HashMap<>();
-
-        for (Row row : t1) {
-            for (Row item : t2) {
-                Double key = row.getField1() + item.getField1();
-                Double value = row.getField2() * item.getField2();
-
-                List<Double> product = map.computeIfAbsent(key,(d) -> new LinkedList<>());
-                product.add(value);
-                map.put(key, product);
-                result.put(key, product);
-            }
-        }
-
-        return result;
-    }
-
     public static List<Row> readRowsFromFile(Path path) throws IOException {
         BufferedReader reader = Files.newBufferedReader(path);
         String line = reader.readLine().trim();

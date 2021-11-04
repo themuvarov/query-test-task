@@ -7,12 +7,14 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import org.query.calc.domain.Group;
+import org.query.calc.domain.Node;
 import org.query.calc.domain.Row;
 
 public class QueryCalcImpl implements QueryCalc {
@@ -49,25 +51,51 @@ public class QueryCalcImpl implements QueryCalc {
         List<Row> t2Rows = Utils.readRowsFromFile(t2);
         List<Row> t3Rows = Utils.readRowsFromFile(t3);
         // SELECT * FROM t2 JOIN t3
-        TreeMap<Double, List<Double>> crossJoinResult = Utils.cartesianProduct(t2Rows, t3Rows);
+        TreeMap<Double, Node> crossJoinResult = new TreeMap<>(Double::compareTo);
+        Map<Double, Node> map = new HashMap<>();
+
+        //cartesianProduct
+        for (Row row : t2Rows) {
+            for (Row item : t3Rows) {
+                Double key = row.getField1() + item.getField1();
+                Double value = row.getField2() * item.getField2();
+
+                Node product = map.computeIfAbsent(key, (d) -> new Node(new LinkedList<>()));
+                product.addYz(value);
+                map.put(key, product);
+                crossJoinResult.put(key, product);
+            }
+        }
+
+        //Linked list to traverse over in linear way
+        Iterator<Node> iter = crossJoinResult.values().iterator();
+        Node root = null;
+        while (iter.hasNext()) {
+            Node cur = iter.next();
+            if (root != null) {
+                root.setNext(cur);
+            }
+            root = cur;
+        }
 
         List<Row> t1Rows = Utils.readRowsFromFile(t1);
 
-        Collection<Group> leftJoinGroups = leftJoin(t1Rows,crossJoinResult);
+        Collection<Group> leftJoinGroups = leftJoin(t1Rows, crossJoinResult);
 
         Utils.writeResultToFile(sortAndLimit(leftJoinGroups), output);
     }
 
-    private Collection<Group> leftJoin(List<Row> t1Rows, TreeMap<Double, List<Double>> crossJoinResult) {
+    private Collection<Group> leftJoin(List<Row> t1Rows, TreeMap<Double, Node> crossJoinResult) {
         //GROUP BY a
         Map<Double, Group> t1Map = new HashMap<>();
 
         t1Rows.forEach(row -> {
             //LEFT JOIN ON a < b + c
-            SortedMap<Double, List<Double>> leftJoin = crossJoinResult.tailMap(row.getField1(), false);
-            if (!leftJoin.isEmpty()) {
-                leftJoin.forEach((key, products) -> {
-                    products.forEach(rec -> {
+            Map.Entry<Double, Node> leftJoin = crossJoinResult.higherEntry(row.getField1());
+            if (leftJoin != null) {
+                Node products = leftJoin.getValue();
+                while (products != null) {
+                    products.getYz().forEach(rec -> {
                         // x * yz
                         Double xyz = row.getField2() * rec;
                         Group group = t1Map
@@ -75,7 +103,8 @@ public class QueryCalcImpl implements QueryCalc {
                         // SUM(xyz)
                         group.add(xyz);
                     });
-                });
+                    products = products.getNext();
+                }
             } else {
                 // NULL in join -> xyz := 0
                 t1Map.computeIfAbsent(row.getField1(), k -> new Group(row.getNum(), row.getField1()));
